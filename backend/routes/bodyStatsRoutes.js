@@ -1,19 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const BodyStat = require('../models/BodyStat');
+// Controller import kar rahe hain (agar file create ki hai step 4 mein)
+const { getStats, setStat } = require('../controllers/bodyStatsController'); 
 const { protect } = require('../middleware/authMiddleware');
 
-router.get('/', protect, async (req, res) => {
-  const stats = await BodyStat.find({ user: req.user.id }).sort({ date: -1 });
-  res.json(stats);
-});
-
-router.post('/', protect, async (req, res) => {
-  const stats = await BodyStat.create({
-    user: req.user.id,
-    ...req.body
-  });
-  res.status(201).json(stats);
-});
+router.route('/').get(protect, getStats).post(protect, setStat);
 
 module.exports = router;

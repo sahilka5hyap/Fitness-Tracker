@@ -1,5 +1,5 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
-import { Send, Bot, User, Zap, Utensils, Dumbbell } from 'lucide-react';
+import { Send, Bot, Sparkles, Activity, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 
 const AICoach = () => {
@@ -7,30 +7,58 @@ const AICoach = () => {
   const [messages, setMessages] = useState([
     { 
       role: 'ai', 
-      content: `Hey ${user?.name || 'there'}! I'm your AI fitness coach. I can help you with personalized workout plans and nutrition advice based on your goal of "${user?.fitnessGoal || 'fitness'}". What would you like to work on today?` 
+      content: `Hello ${user?.name || 'Champ'}! 👋\nI am your **AI Coach**. I see your goal is **${user?.fitnessGoal || 'General Fitness'}**.\n\nHow can I help you train today?` 
     }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // --- 🎙️ SPEECH TO TEXT LOGIC ---
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+
+  if (recognition) {
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      handleSend(transcript); // Automatically send when voice stops
+      setIsListening(false);
+    };
+    recognition.onend = () => setIsListening(false);
+  }
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognition.stop();
+    } else {
+      setIsListening(true);
+      recognition.start();
+    }
   };
 
-  useEffect(scrollToBottom, [messages]);
+  // --- 🔊 TEXT TO SPEECH LOGIC ---
+  const speakResponse = (text) => {
+    if (!isVoiceEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel(); // Stop any current speaking
+    const utterance = new SpeechSynthesisUtterance(text.replace(/\*\*/g, '')); 
+    utterance.rate = 2.1; // Slightly faster for natural feel
+    window.speechSynthesis.speak(utterance);
+  };
 
+  // --- 📩 MESSAGE HANDLING ---
   const handleSend = async (text = input) => {
     if (!text.trim()) return;
 
-    // 1. Add User Message
     const userMsg = { role: 'user', content: text };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
 
     try {
-      // 2. Call Backend API
       const response = await fetch('http://localhost:5000/api/ai/chat', {
         method: 'POST',
         headers: {
@@ -41,121 +69,108 @@ const AICoach = () => {
       });
       
       const data = await response.json();
-
-      // 3. Add AI Response
       const aiMsg = { role: 'ai', content: data.response };
       setMessages(prev => [...prev, aiMsg]);
+      
+      // AI Voice feedback
+      speakResponse(data.response);
 
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'ai', content: "Sorry, I'm having trouble connecting to the server." }]);
+      setMessages(prev => [...prev, { role: 'ai', content: "⚠️ **Connection Error.** Please check your internet or API key." }]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper to format newlines as <br>
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // --- ✨ MARKDOWN FORMATTER ---
   const FormatMessage = ({ content }) => {
-    return content.split('\n').map((line, i) => (
-      <React.Fragment key={i}>
-        {line}
-        <br />
-      </React.Fragment>
-    ));
+    return content.split('\n').map((line, i) => {
+      const isListItem = line.trim().startsWith('1.') || line.trim().startsWith('-') || line.trim().startsWith('*');
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      return (
+        <div key={i} className={`mb-1 ${isListItem ? 'pl-4 border-l-2 border-[#D4FF33]/20 my-1' : ''}`}>
+          {parts.map((part, index) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={index} className="text-[#D4FF33] font-bold">{part.slice(2, -2)}</strong>;
+            }
+            return <span key={index}>{part}</span>;
+          })}
+        </div>
+      );
+    });
   };
 
   return (
-    <div className="min-h-screen bg-background p-6 pb-24 text-white flex flex-col">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-3">
-          <div className="bg-primary p-2 rounded-lg text-black">
-            <Zap size={24} />
+    <div className="flex flex-col h-[calc(100vh-85px)] bg-[#050505] text-white overflow-hidden relative">
+      <div className="absolute top-[-5%] left-[-5%] w-[250px] h-[250px] bg-[#D4FF33] rounded-full filter blur-[100px] opacity-10 pointer-events-none"></div>
+
+      {/* HEADER */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 backdrop-blur-md bg-black/40 z-10">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#D4FF33] rounded-lg">
+            <Bot size={20} className="text-black" />
           </div>
-          AI Coach
-        </h1>
-        <p className="text-gray-400 mt-1">Your personal fitness & nutrition advisor</p>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
+          <h1 className="text-lg font-black uppercase tracking-tighter">AI Coach</h1>
+        </div>
         <button 
-          onClick={() => handleSend("Generate a workout plan for today")}
-          className="flex items-center gap-2 bg-[#121212] border border-gray-700 px-4 py-2 rounded-full text-sm hover:border-primary hover:text-primary transition whitespace-nowrap"
+          onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+          className={`p-2 rounded-full transition-all ${isVoiceEnabled ? 'bg-[#D4FF33] text-black' : 'bg-gray-800 text-gray-500'}`}
         >
-          <Dumbbell size={16} /> Generate Workout Plan
-        </button>
-        <button 
-          onClick={() => handleSend("Suggest a meal plan for today")}
-          className="flex items-center gap-2 bg-[#121212] border border-gray-700 px-4 py-2 rounded-full text-sm hover:border-primary hover:text-primary transition whitespace-nowrap"
-        >
-          <Utensils size={16} /> Generate Meal Plan
+          {isVoiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
         </button>
       </div>
 
-      {/* Chat Window */}
-      <div className="flex-1 bg-card border border-gray-800 rounded-2xl p-4 overflow-y-auto mb-4 custom-scrollbar" style={{ maxHeight: '60vh' }}>
-        <div className="space-y-4">
-          {messages.map((msg, index) => (
-            <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              
-              {msg.role === 'ai' && (
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                   <Bot size={16} className="text-black" />
-                </div>
-              )}
-
-              <div className={`p-4 rounded-2xl max-w-[85%] text-sm leading-relaxed ${
-                msg.role === 'user' 
-                  ? 'bg-primary text-black font-medium rounded-tr-none' 
-                  : 'bg-[#1e1e1e] text-gray-200 rounded-tl-none border border-gray-700'
-              }`}>
-                <FormatMessage content={msg.content} />
-              </div>
-
-              {msg.role === 'user' && (
-                 <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
-                    <User size={16} className="text-white" />
-                 </div>
-              )}
+      {/* CHAT WINDOW */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+        {messages.map((msg, index) => (
+          <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-3`}>
+            {msg.role === 'ai' && <Sparkles size={16} className="text-[#D4FF33] mt-2" />}
+            <div className={`p-4 rounded-2xl max-w-[85%] text-sm leading-relaxed ${
+              msg.role === 'user' ? 'bg-[#D4FF33] text-black font-bold' : 'bg-[#111] border border-white/10 text-gray-200'
+            }`}>
+              <FormatMessage content={msg.content} />
             </div>
-          ))}
-          
-          {loading && (
-            <div className="flex gap-3">
-               <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                   <Bot size={16} className="text-black" />
-               </div>
-               <div className="bg-[#1e1e1e] p-4 rounded-2xl rounded-tl-none border border-gray-700">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-100"></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-200"></div>
-                  </div>
-               </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
+          </div>
+        ))}
+        {loading && <div className="ml-8 text-[#D4FF33] text-xs animate-pulse">Coach is thinking...</div>}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* INPUT CONTROLS */}
+      <div className="p-4 bg-black/80 border-t border-white/5">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={toggleListening}
+            className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-600 animate-pulse text-white' : 'bg-[#181818] text-[#D4FF33]'}`}
+          >
+            {isListening ? <MicOff size={22} /> : <Mic size={22} />}
+          </button>
+          <input 
+            type="text" 
+            className="flex-1 bg-[#0F0F0F] border border-white/10 rounded-xl p-4 text-white focus:border-[#D4FF33] outline-none transition-all"
+            placeholder={isListening ? "I'm listening..." : "Ask your coach anything..."}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+          />
+          <button 
+            onClick={() => handleSend()}
+            disabled={!input.trim() && !loading}
+            className="p-4 bg-[#D4FF33] text-black rounded-xl hover:scale-105 active:scale-95 transition-all"
+          >
+            <Send size={22} />
+          </button>
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="relative">
-        <input 
-          type="text" 
-          className="w-full bg-[#121212] border border-gray-700 rounded-xl p-4 pr-12 text-white focus:border-primary focus:outline-none"
-          placeholder="Ask me anything about fitness..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-        />
-        <button 
-          onClick={() => handleSend()}
-          disabled={loading || !input.trim()}
-          className="absolute right-3 top-3 p-2 bg-primary rounded-lg text-black hover:opacity-90 disabled:opacity-50 transition"
-        >
-          <Send size={18} />
-        </button>
-      </div>
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
+      `}</style>
     </div>
   );
 };

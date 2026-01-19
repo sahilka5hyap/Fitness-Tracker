@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Plus, Dumbbell, Calendar, Clock, Flame, Trash2 } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
+import { 
+  Plus, Dumbbell, Calendar, ChevronRight, Clock, Flame, Repeat 
+} from 'lucide-react';
 import WorkoutModel from '../components/WorkoutModel';
 
 const Workouts = () => {
@@ -9,131 +11,114 @@ const Workouts = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Fetch Workouts function
+  // Daily Routine Logic
+  const getDailyRoutine = () => {
+    const day = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const routines = {
+      'Monday': { title: 'International Chest Day', focus: 'Chest & Triceps', exercises: ['Bench Press', 'Incline Dumbbell Press', 'Tricep Dips'] },
+      'Tuesday': { title: 'Back Attack', focus: 'Back & Biceps', exercises: ['Deadlift', 'Pull Ups', 'Barbell Rows'] },
+      'Wednesday': { title: 'Leg Day', focus: 'Legs & Core', exercises: ['Squats', 'Leg Press', 'Calf Raises'] },
+      'Thursday': { title: 'Shoulder Boulder', focus: 'Shoulders & Abs', exercises: ['Overhead Press', 'Lateral Raises', 'Face Pulls'] },
+      'Friday': { title: 'Full Body HIIT', focus: 'Cardio & Conditioning', exercises: ['Burpees', 'Kettlebell Swings', 'Sprints'] },
+      'Saturday': { title: 'Active Recovery', focus: 'Yoga / Light Cardio', exercises: ['Stretching', 'Light Jog', 'Foam Rolling'] },
+      'Sunday': { title: 'Rest Day', focus: 'Rest & Meal Prep', exercises: ['Sleep', 'Hydrate', 'Relax'] }
+    };
+    return { day, ...routines[day] };
+  };
+  const daily = getDailyRoutine();
+
   const fetchWorkouts = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/workouts', {
+      const res = await fetch('http://localhost:5000/api/workouts', {
         headers: { 'Authorization': `Bearer ${user.token}` }
       });
-      const data = await response.json();
+      const data = await res.json();
       setWorkouts(data);
-      setLoading(false);
-    } catch (error) {
-      console.error("Failed to fetch workouts", error);
-    }
+    } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchWorkouts();
-  }, [user]);
-
-  // Calculate Stats
-  const totalWorkouts = workouts.length;
-  const totalCalories = workouts.reduce((acc, curr) => acc + (curr.caloriesBurned || 0), 0);
-  const totalMinutes = workouts.reduce((acc, curr) => acc + (curr.duration || 0), 0);
-  
-  // Get workouts for "This Week" (Simplified check)
-  const thisWeekCount = workouts.filter(w => {
-    const workoutDate = new Date(w.date);
-    const now = new Date();
-    const diffTime = Math.abs(now - workoutDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    return diffDays <= 7;
-  }).length;
+  useEffect(() => { if(user) fetchWorkouts(); }, [user]);
 
   return (
-    <div className="min-h-screen bg-background p-6 pb-24 text-white">
-      {/* Header */}
+    <div className="p-6 pb-24 min-h-screen text-white">
+      
+      {/* HEADER */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Workouts</h1>
-          <p className="text-gray-400">Track and manage your exercise sessions</p>
+          <h1 className="text-3xl font-bold mb-1">Workouts</h1>
+          <p className="text-gray-400">Log your training and track progress</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-primary text-black font-bold px-4 py-2 rounded-lg flex items-center gap-2 hover:opacity-90"
+          className="bg-[#D4FF33] text-black font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 hover:opacity-90 transition shadow-lg shadow-[#D4FF33]/20"
         >
           <Plus size={20} /> Log Workout
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-card border border-gray-800 p-4 rounded-xl">
-          <p className="text-gray-400 text-xs uppercase font-bold">Total Workouts</p>
-          <div className="flex items-center gap-2 mt-1">
-             <Dumbbell className="text-primary" size={20} />
-             <span className="text-2xl font-bold">{totalWorkouts}</span>
-          </div>
+      {/* DAILY ROUTINE CARD */}
+      <div className="bg-gradient-to-r from-[#1e1e1e] to-[#121212] border border-gray-800 p-6 rounded-2xl mb-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4FF33] blur-[80px] opacity-10 rounded-full pointer-events-none"></div>
+        
+        <div className="flex items-center gap-2 mb-2">
+           <Calendar className="text-[#D4FF33]" size={18} />
+           <span className="text-xs font-bold text-[#D4FF33] uppercase tracking-wider">{daily.day}'s Routine</span>
         </div>
-        <div className="bg-card border border-gray-800 p-4 rounded-xl">
-          <p className="text-gray-400 text-xs uppercase font-bold">Total Calories</p>
-          <div className="flex items-center gap-2 mt-1">
-             <Flame className="text-orange-500" size={20} />
-             <span className="text-2xl font-bold">{totalCalories}</span>
-          </div>
-        </div>
-        <div className="bg-card border border-gray-800 p-4 rounded-xl">
-          <p className="text-gray-400 text-xs uppercase font-bold">Total Minutes</p>
-          <div className="flex items-center gap-2 mt-1">
-             <Clock className="text-blue-500" size={20} />
-             <span className="text-2xl font-bold">{totalMinutes}</span>
-          </div>
-        </div>
-        <div className="bg-card border border-gray-800 p-4 rounded-xl">
-          <p className="text-gray-400 text-xs uppercase font-bold">This Week</p>
-          <div className="flex items-center gap-2 mt-1">
-             <Calendar className="text-green-500" size={20} />
-             <span className="text-2xl font-bold">{thisWeekCount}</span>
-          </div>
+        
+        <h2 className="text-2xl font-bold text-white mb-1">{daily.title}</h2>
+        <p className="text-gray-400 text-sm mb-6">Focus: {daily.focus}</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {daily.exercises.map((ex, i) => (
+             <div key={i} className="bg-black/30 border border-white/5 p-3 rounded-lg flex items-center gap-3">
+               <div className="w-8 h-8 rounded-full bg-[#2a2a2a] flex items-center justify-center text-xs font-bold text-gray-300">{i+1}</div>
+               <span className="text-sm font-medium text-gray-200">{ex}</span>
+             </div>
+          ))}
         </div>
       </div>
 
-      {/* Recent Entries List */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold mb-4">Recent Entries</h2>
-        
-        {loading ? (
-          <p className="text-gray-500">Loading workouts...</p>
-        ) : workouts.length === 0 ? (
-          <div className="bg-card border border-gray-800 rounded-2xl p-12 text-center">
-            <Dumbbell className="mx-auto text-gray-600 mb-4" size={48} />
-            <p className="text-gray-400">No workouts logged yet</p>
-            <p className="text-sm text-gray-600">Start by logging your first workout!</p>
-          </div>
+      {/* HISTORY LIST */}
+      <h3 className="font-bold text-lg mb-4">Recent Logs</h3>
+      <div className="space-y-3">
+        {workouts.length === 0 ? (
+           <div className="text-center py-10 text-gray-500">No workouts logged yet.</div>
         ) : (
-          workouts.map((workout) => (
-            <div key={workout._id} className="bg-card border border-gray-800 p-4 rounded-xl flex justify-between items-center hover:border-gray-700 transition">
-              <div className="flex items-center gap-4">
-                <div className="bg-[#0A0A0A] p-3 rounded-lg border border-gray-800">
-                  <Dumbbell className="text-primary" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white">{workout.name}</h3>
-                  <div className="flex gap-3 text-xs text-gray-400 mt-1">
-                    <span className="flex items-center gap-1"><Calendar size={12}/> {new Date(workout.date).toLocaleDateString()}</span>
-                    <span className="flex items-center gap-1"><Clock size={12}/> {workout.duration} min</span>
-                    <span className="flex items-center gap-1"><Flame size={12}/> {workout.caloriesBurned} kcal</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="text-right">
-                 <span className="bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded uppercase font-bold tracking-wider">
-                   {workout.type}
-                 </span>
-              </div>
-            </div>
-          ))
+           workouts.map((workout) => (
+             <div key={workout._id} className="bg-[#121212] border border-gray-800 p-5 rounded-xl flex justify-between items-center hover:border-gray-600 transition-colors group">
+               <div className="flex items-center gap-4">
+                 <div className="p-3 bg-gray-900 rounded-xl text-[#D4FF33] group-hover:bg-[#D4FF33] group-hover:text-black transition-colors">
+                    <Dumbbell size={20} />
+                 </div>
+                 <div>
+                   <h4 className="font-bold text-white text-lg">{workout.title}</h4>
+                   <div className="flex gap-4 text-xs text-gray-400 mt-1">
+                     <span className="flex items-center gap-1"><Calendar size={12}/> {new Date(workout.date).toLocaleDateString()}</span>
+                     {workout.duration > 0 && <span className="flex items-center gap-1"><Clock size={12}/> {workout.duration} min</span>}
+                     {workout.caloriesBurned > 0 && <span className="flex items-center gap-1"><Flame size={12}/> {workout.caloriesBurned} cal</span>}
+                   </div>
+                 </div>
+               </div>
+               
+               {/* Stats display */}
+               <div className="text-right">
+                  {workout.weight > 0 ? (
+                    <div className="flex flex-col items-end">
+                       <span className="text-xl font-bold text-white">{workout.weight} <span className="text-xs text-gray-500">kg</span></span>
+                       <span className="text-xs text-gray-400 flex items-center gap-1">
+                         <Repeat size={12} /> {workout.sets} x {workout.reps}
+                       </span>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-bold text-gray-500">Cardio</span>
+                  )}
+               </div>
+             </div>
+           ))
         )}
       </div>
 
-      {/* Modal */}
-      <WorkoutModel 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSave={fetchWorkouts} 
-      />
+      <WorkoutModel isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={fetchWorkouts} />
     </div>
   );
 };

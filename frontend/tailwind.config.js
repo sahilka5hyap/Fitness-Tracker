@@ -6,11 +6,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: "#0A0A0A",
-        card: "#121212",
-        primary: "#D4FF33",
-        textMain: "#FFFFFF",
-        textMuted: "#A1A1AA"
+        primary: '#D4FF33', // Neon Lime
+        dark: '#0A0A0A',    // Deep Background
+        card: '#121212',    // Card Background
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'], // Ensure Inter is used
       }
     },
   },
