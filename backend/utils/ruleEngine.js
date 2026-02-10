@@ -26,7 +26,7 @@ const generateSmartPlan = (user) => {
     const availableExercises = exerciseDB[goal] || exerciseDB['maintenance'];
     const availableDiet = dietDB[goal] || dietDB['muscle_gain']; // Default fallback
 
-    // 3. Randomization (Yahan magic hota hai - Har baar alag 3 exercises)
+    // 3. Randomization
     const todaysWorkout = getRandomItems(availableExercises, 4); 
     const todaysDiet = getRandomItems(availableDiet, 3);
     const todaysQuote = quotes[Math.floor(Math.random() * quotes.length)];

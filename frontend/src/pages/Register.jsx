@@ -16,7 +16,7 @@ const Register = () => {
     if (res.error) {
       setError(res.error);
     } else {
-      navigate('/onboarding'); // Redirect to Onboarding after signup
+      navigate('/Onboarding'); // Redirect to Onboarding after signup
     }
   };
 

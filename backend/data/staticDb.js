@@ -1,4 +1,4 @@
-// Ye hamara "Offline Brain" hai
+
 const exerciseDB = {
     weight_loss: [
         { name: "Burpees", duration: "10 mins", intensity: "High" },
@@ -51,5 +51,5 @@ const quotes = [
     "Your only limit is you.",
     "Don't stop when you're tired, stop when you're done."
 ];
-module.exports = { workouts, diets, tips };
-//module.exports = { exerciseDB, dietDB, quotes };
+
+module.exports = { exerciseDB, dietDB, quotes };

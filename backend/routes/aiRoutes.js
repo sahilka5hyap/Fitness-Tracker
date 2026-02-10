@@ -4,10 +4,11 @@ const { protect } = require('../middleware/authMiddleware');
 const User = require('../models/User');
 const { OpenAI } = require('openai');
 
+
 // Initialize OpenRouter
 const openai = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY, // Make sure this is in your .env
+    apiKey: process.env.OPENROUTER_API_KEY, 
 });
 
 const muscleGroupsDB = {
